@@ -1,49 +1,43 @@
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
-const sendgridTransport = require('nodemailer-sendgrid-transport');
 
 const User = require('../models/user');
 
-const transporter = nodemailer.createTransport(
-  sendgridTransport({
-    auth: {
-      api_key:
-        ' INSERT OWN API KEY ',
-    },
-  })
-);
+const errorFormatter = ({ msg, param, value }) => {
+  return {
+    message: msg,
+    param,
+    value,
+  };
+};
 
 exports.signup = async (req, res, next) => {
   try {
-    const errors = validationResult(req);
+    const errors = validationResult(req).formatWith(errorFormatter);
+    console.log(errors);
     if (!errors.isEmpty()) {
-      const errors = new Error('Signup failed');
+      const error = new Error({ errors: errors.array() });
       error.statusCode = 422;
       error.data = errors.array();
       throw error;
     }
-  
-    const email = req.body.email;
-    const password = req.body.password;
-    const name = req.body.name;
+
+    const { username, password } = req.body;
+
     const hashedPw = await bcrypt.hash(password, 12);
-      const user = new User({
-      email: email,
+    const user = new User({
+      username: username,
       password: hashedPw,
-      name: name
     });
     const result = await user.save();
-    res.status(201).json({ message: 'User created', userId: result._id});
-    await transporter.sendMail({
-      to: email,
-      from: ' INSERT EMAIL HERE ',
-      subject: 'Signup successful',
-      html: '<h1>You have successfully signed up</h1> <p>Signup Successful, Welcome!</p>'
+    res.status(201).json({
+      message: 'User created',
+      username: username,
+      userId: result._id,
     });
-} catch (err) {
-    if(!err.statusCode) {
+  } catch (err) {
+    if (!err.statusCode) {
       err.statusCode = 500;
     }
     next(err);
@@ -51,32 +45,41 @@ exports.signup = async (req, res, next) => {
 };
 
 exports.login = async (req, res, next) => {
-  const email = req.body.email;
-  const password = req.body.password;
+  // const errors = validationResult(req).formatWith(errorFormatter);
+  // console.log(errors);
+  // if (!errors.isEmpty()) {
+  //   const error = new Error({ errors: errors.array() });
+  //   error.statusCode = 422;
+  //   error.data = errors.array();
+  //   throw error;
+  // }
+
+  const { username, password } = req.body;
+
   let loadedUser;
   try {
-    const user = await User.findOne({ email: email });
+    const user = await User.findOne({ username: username });
     if (!user) {
-      const error = new Error('A user with this email could not be found.');
+      const error = new Error('Please check your login credentials');
       error.statusCode = 401;
       throw error;
     }
     loadedUser = user;
     const isEqual = await bcrypt.compare(password, user.password);
     if (!isEqual) {
-      const error = new Error('Wrong password!');
+      const error = new Error('Please check your login credentials');
       error.statusCode = 401;
       throw error;
     }
     const token = jwt.sign(
       {
-        email: loadedUser.email,
-        userId: loadedUser._id.toString()
+        username: loadedUser.username,
+        userId: loadedUser._id.toString(),
       },
       'tokensecret',
       { expiresIn: '1h' }
     );
-    res.status(200).json({ token: token, userId: loadedUser._id.toString() });
+    res.status(200).json({ accessToken: token, username: loadedUser.username });
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;

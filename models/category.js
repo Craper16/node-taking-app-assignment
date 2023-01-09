@@ -10,13 +10,7 @@ const categorySchema = new Schema({
     creator: {
         type: Schema.Types.ObjectId,
         ref: 'User'
-    },
-    notes: [
-        {
-            type: Schema.Types.ObjectId,
-            ref: 'Note'
-        }
-    ]
+    }
 });
 
 module.exports = mongoose.model('Category', categorySchema);
