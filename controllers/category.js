@@ -1,22 +1,137 @@
-const express = require('express');
-const { body } = require('express-validator');
+const { validationResult } = require('express-validator');
 
-const categoryController = require('../services/category');
-const isAuth = require('../middlewares/isAuth');
+const Category = require('../models/category');
+const Note = require('../models/note');
+const User = require('../models/user');
 
-const router = express.Router();
+const PER_PAGE = 2;
 
-router.get('/all',isAuth, categoryController.getCategories);
+const errorFormatter = ({ msg, param, value }) => {
+  return {
+    message: msg,
+    param,
+    value,
+  };
+};
 
-router.get('/:categoryId', isAuth, categoryController.getCategory);
+exports.getCategories = async (req, res, next) => {
+  const currentPage = req.query.page || 1;
+  try {
+    const totalItems = await Category.find().countDocuments();
+    const categories = await Category.find()
+      .populate()
+      .sort({ createdAt: -1 })
+      .skip((currentPage - 1) * PER_PAGE)
+      .limit(PER_PAGE);
 
-router.post('/',isAuth, categoryController.createCategory);
+    res.status(200).json({
+      categories: categories,
+      length: categories.length,
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
 
-router.put('/:categoryId',  isAuth, categoryController.updateCategory); //update
+exports.getCategory = async (req, res, next) => {
+  const { categoryId } = req.params;
+  const category = await Category.findById(categoryId);
+  try {
+    if (!category) {
+      const error = new Error('Could not find category');
+      error.statusCode = 404;
+      throw error;
+    }
+    res.status(200).json({ category: category });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
 
-router.delete('/:categoryId',isAuth, categoryController.deleteCategory); //delete
+exports.createCategory = async (req, res, next) => {
+  try {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      const error = new Error({ errors: errors.array() });
+      error.statusCode = 422;
+      error.data = errors.array();
+      throw error;
+    }
 
+    const { title } = req.body;
+    category = new Category({
+      title: title,
+    });
+    await category.save();
+    res.status(201).json({
+      message: 'Category created successfuly',
+      data: { category: category },
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
 
-module.exports = router;
+exports.updateCategory = async (req, res, next) => {
+  try {
+    const { categoryId } = req.params;
 
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      const error = new Error({ errors: errors.array() });
+      error.statusCode = 422;
+      error.data = errors.array();
+      throw error;
+    }
+    const { title } = req.body;
 
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      const error = new Error('Category could not be fetched');
+      error.statusCode = 403;
+      throw error;
+    }
+    category.title = title;
+    const result = await category.save();
+    res
+      .status(200)
+      .json({ message: 'Category Updated', category: result.title });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+exports.deleteCategory = async (req, res, next) => {
+  try {
+    const { categoryId } = req.params;
+    const category = await Category.findById(categoryId);
+
+    if (!category) {
+      const error = new Error('Category could not be fetched');
+      error.statusCode = 404;
+      throw error;
+    }
+    await Note.deleteMany({ noteCategory: category._id });
+    await Category.findByIdAndRemove(categoryId);
+    res
+      .status(200)
+      .json({ message: 'Category Deleted', categoryId: categoryId });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};

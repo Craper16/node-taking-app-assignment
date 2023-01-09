@@ -1,37 +1,26 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
-const authRoutes = require('./controllers/auth');
-const noteRoutes = require('./controllers/note');
-const categoryRoutes = require('./controllers/category');
+const authRoutes = require('./routes/auth');
+const noteRoutes = require('./routes/note');
+const categoryRoutes = require('./routes/category');
 
 const app = express();
 
 app.use(express.json());
-app.use(bodyParser.json());
-app.use(
-  bodyParser.urlencoded({
-    extended: true,
-  })
-);
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
-
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader(
-    'Access-Control-Allow-Methods',
-    'OPTIONS, GET, POST, PUT, PATCH, DELETE'
-  );
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  next();
-});
+app.options('*', cors());
 
 app.use('/auth', authRoutes);
 app.use('/category', categoryRoutes);
 app.use('/note', noteRoutes);
+app.use('*', (req, res) => {
+  return res.status(404).json({ message: 'Route not found' });
+});
 
 app.use((error, req, res, next) => {
   // console.log(error);
@@ -42,9 +31,9 @@ app.use((error, req, res, next) => {
 });
 
 mongoose
-  .connect('mongodb+srv://mat:qxYMJX2SgV@cluster0.k5g1lmx.mongodb.net/test')
+  .connect(process.env.DB_URI)
   .then(() => {
-    console.log('Server running on port 5000');
-    app.listen(5000);
+    console.log(`Server running on port ${process.env.PORT}`);
+    app.listen(process.env.PORT || 8081);
   })
   .catch((err) => console.log(err));

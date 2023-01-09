@@ -38,9 +38,13 @@ exports.loginValidation = [
     .withMessage('Username must be a string')
     .not()
     .isEmpty()
-    .custom((value) => {
-      return User.findOne({ username: value }).then((user) => {
+    .custom(async (value, { req }) => {
+      return await User.findOne({ username: value }).then(async (user) => {
         if (!user) {
+          return Promise.reject('Please check your login credentials');
+        }
+        const isEqual = await bcrypt.compare(req.body.password, user.password);
+        if (!isEqual) {
           return Promise.reject('Please check your login credentials');
         }
       });

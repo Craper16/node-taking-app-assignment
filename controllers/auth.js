@@ -1,16 +1,80 @@
-const express = require('express');
+require('dotenv').config();
+const { validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-const {
-  signupValidation,
-  loginValidation,
-} = require('../validations/authValidations');
+const User = require('../models/user');
 
-const authController = require('../services/auth');
+const errorFormatter = ({ msg, param, value }) => {
+  return {
+    message: msg,
+    param,
+    value,
+  };
+};
 
-const router = express.Router();
+exports.signup = async (req, res, next) => {
+  try {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      const error = new Error({ errors: errors.array() });
+      error.statusCode = 422;
+      error.data = errors.array();
+      throw error;
+    }
 
-router.post('/signup', signupValidation, authController.signup);
+    const { username, password } = req.body;
 
-router.post('/login', loginValidation, authController.login);
+    const hashedPw = await bcrypt.hash(password, 12);
+    const user = new User({
+      username: username,
+      password: hashedPw,
+    });
+    const result = await user.save();
+    res.status(201).json({
+      message: 'User created',
+      username: username,
+      userId: result._id,
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
 
-module.exports = router;
+exports.login = async (req, res, next) => {
+  try {
+    const errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      const error = new Error({ errors: errors.array() });
+      error.statusCode = 422;
+      error.data = errors.array();
+      throw error;
+    }
+
+    const { username, password } = req.body;
+
+    let loadedUser;
+
+    const user = await User.findOne({ username: username });
+    loadedUser = user;
+    await bcrypt.compare(password, user.password);
+
+    const token = jwt.sign(
+      {
+        username: loadedUser.username,
+        userId: loadedUser._id.toString(),
+      },
+      process.env.SECRET,
+      { expiresIn: '1h' }
+    );
+    res.status(200).json({ accessToken: token, username: loadedUser.username });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};

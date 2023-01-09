@@ -14,17 +14,19 @@ const noteSchema = new Schema(
     },
     creator: {
       type: Schema.Types.ObjectId,
-      ref: 'User'
+      required: true,
+      ref: 'User',
     },
-    noteCategory: {
+    category: {
       type: Schema.Types.ObjectId,
-      ref: 'Category'
+      required: true,
+      ref: 'Category',
     },
     tags: [
       {
         type: String,
-      }
-    ]
+      },
+    ],
   },
   { timestamps: true }
 );
