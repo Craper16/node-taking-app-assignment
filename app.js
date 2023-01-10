@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const cors = require('cors');
 
 const authRoutes = require('./routes/auth');
@@ -18,8 +17,9 @@ app.options('*', cors());
 app.use('/auth', authRoutes);
 app.use('/category', categoryRoutes);
 app.use('/note', noteRoutes);
+
 app.use('*', (req, res) => {
-  return res.status(404).json({ message: 'Route not found' });
+  return res.status(404).json({ message: 'Endpoint not found' });
 });
 
 app.use((error, req, res, next) => {

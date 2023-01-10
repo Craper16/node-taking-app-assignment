@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 
 const User = require('../models/user');
 
-const errorFormatter = ({ msg, param, value }) => {
+const errorSignupFormatter = ({ msg, param, value }) => {
   return {
     message: msg,
     param,
@@ -13,9 +13,15 @@ const errorFormatter = ({ msg, param, value }) => {
   };
 };
 
+const errorLoginFormatter = ({ msg }) => {
+  return {
+    message: msg,
+  };
+};
+
 exports.signup = async (req, res, next) => {
   try {
-    const errors = validationResult(req).formatWith(errorFormatter);
+    const errors = validationResult(req).formatWith(errorSignupFormatter);
     if (!errors.isEmpty()) {
       const error = new Error({ errors: errors.array() });
       error.statusCode = 422;
@@ -46,7 +52,7 @@ exports.signup = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const errors = validationResult(req).formatWith(errorFormatter);
+    const errors = validationResult(req).formatWith(errorLoginFormatter);
     if (!errors.isEmpty()) {
       const error = new Error({ errors: errors.array() });
       error.statusCode = 422;
@@ -59,8 +65,20 @@ exports.login = async (req, res, next) => {
     let loadedUser;
 
     const user = await User.findOne({ username: username });
+    if (!user) {
+      const error = new Error('Please check your login credentials');
+      error.statusCode = 401;
+      throw error;
+    }
+
     loadedUser = user;
-    await bcrypt.compare(password, user.password);
+
+    const isEqual = await bcrypt.compare(password, user.password);
+    if (!isEqual) {
+      const error = new Error('Please check your login credentials');
+      error.statusCode = 401;
+      throw error;
+    }
 
     const token = jwt.sign(
       {

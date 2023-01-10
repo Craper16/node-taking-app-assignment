@@ -11,13 +11,6 @@ exports.createCategoryValidations = [
     .withMessage('Category title is required')
     .trim()
     .toLowerCase()
-    .custom((value) => {
-      return Category.findOne({ title: value }).then((category) => {
-        if (category) {
-          return Promise.reject('Category already exists');
-        }
-      });
-    })
     .isLength({ min: 3, max: 10 })
     .withMessage('Category title must be between 3 to 10 characters'),
 ];

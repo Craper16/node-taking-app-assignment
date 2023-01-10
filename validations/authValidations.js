@@ -1,6 +1,4 @@
 const { check } = require('express-validator');
-const bcrypt = require('bcryptjs');
-const User = require('../models/user');
 
 exports.signupValidation = [
   check('username')
@@ -10,14 +8,7 @@ exports.signupValidation = [
     .isEmpty()
     .withMessage('Username must not be empty')
     .isLength({ min: 5, max: 12 })
-    .withMessage('Username must be between 5 and 12 characters long')
-    .custom((value) => {
-      return User.findOne({ username: value }).then((user) => {
-        if (user) {
-          return Promise.reject('Username already taken');
-        }
-      });
-    }),
+    .withMessage('Username must be between 5 and 12 characters long'),
   check('password')
     .isString()
     .withMessage('Password must be a string')
@@ -37,18 +28,7 @@ exports.loginValidation = [
     .isString()
     .withMessage('Username must be a string')
     .not()
-    .isEmpty()
-    .custom(async (value, { req }) => {
-      return await User.findOne({ username: value }).then(async (user) => {
-        if (!user) {
-          return Promise.reject('Please check your login credentials');
-        }
-        const isEqual = await bcrypt.compare(req.body.password, user.password);
-        if (!isEqual) {
-          return Promise.reject('Please check your login credentials');
-        }
-      });
-    }),
+    .isEmpty(),
   check('password')
     .isString()
     .withMessage('Password must be a string')

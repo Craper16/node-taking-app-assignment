@@ -2,7 +2,6 @@ const { validationResult } = require('express-validator');
 
 const Category = require('../models/category');
 const Note = require('../models/note');
-const User = require('../models/user');
 
 const PER_PAGE = 2;
 
@@ -16,17 +15,18 @@ const errorFormatter = ({ msg, param, value }) => {
 
 exports.getCategories = async (req, res, next) => {
   const currentPage = req.query.page || 1;
+  console.log(currentPage);
   try {
     const totalItems = await Category.find().countDocuments();
     const categories = await Category.find()
-      .populate()
-      .sort({ createdAt: -1 })
+      .sort({ updatedAt: -1 })
       .skip((currentPage - 1) * PER_PAGE)
       .limit(PER_PAGE);
 
     res.status(200).json({
       categories: categories,
       length: categories.length,
+      totalCategories: totalItems,
     });
   } catch (err) {
     if (!err.statusCode) {
@@ -56,6 +56,7 @@ exports.getCategory = async (req, res, next) => {
 
 exports.createCategory = async (req, res, next) => {
   try {
+    const { title } = req.body;
     const errors = validationResult(req).formatWith(errorFormatter);
     if (!errors.isEmpty()) {
       const error = new Error({ errors: errors.array() });
@@ -64,7 +65,13 @@ exports.createCategory = async (req, res, next) => {
       throw error;
     }
 
-    const { title } = req.body;
+    const category = await Category.findOne({ title: title });
+    if (category) {
+      const error = new Error('Category with this title already exists');
+      error.statusCode = 409;
+      throw error;
+    }
+
     category = new Category({
       title: title,
     });
