@@ -2,6 +2,7 @@ const { validationResult } = require('express-validator');
 
 const Category = require('../models/category');
 const Note = require('../models/note');
+const User = require('../models/user');
 
 const PER_PAGE = 2;
 
@@ -15,7 +16,6 @@ const errorFormatter = ({ msg, param, value }) => {
 
 exports.getCategories = async (req, res, next) => {
   const currentPage = req.query.page || 1;
-  console.log(currentPage);
   try {
     const totalItems = await Category.find().countDocuments();
     const categories = await Category.find()
@@ -65,7 +65,7 @@ exports.createCategory = async (req, res, next) => {
       throw error;
     }
 
-    const category = await Category.findOne({ title: title });
+    let category = await Category.findOne({ title: title });
     if (category) {
       const error = new Error('Category with this title already exists');
       error.statusCode = 409;
@@ -120,6 +120,10 @@ exports.updateCategory = async (req, res, next) => {
   }
 };
 
+const pullFromUser = async (user, notesIds) => {
+  return await user.notes.pull(notesIds);
+};
+
 exports.deleteCategory = async (req, res, next) => {
   try {
     const { categoryId } = req.params;
@@ -130,11 +134,20 @@ exports.deleteCategory = async (req, res, next) => {
       error.statusCode = 404;
       throw error;
     }
-    await Note.deleteMany({ noteCategory: category._id });
-    await Category.findByIdAndRemove(categoryId);
-    res
-      .status(200)
-      .json({ message: 'Category Deleted', categoryId: categoryId });
+
+    const notes = await Note.find({ category: categoryId });
+
+    const notesIds = await notes.map((note) => {
+      return note._id;
+    });
+
+    await User.updateMany({}, { $pullAll: { notes: notesIds } });
+    await Note.deleteMany({ category: category._id });
+    const categoryDeleted = await Category.findByIdAndRemove(categoryId);
+    res.status(200).json({
+      message: 'Category deleted successfuly',
+      category: categoryDeleted.title,
+    });
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;

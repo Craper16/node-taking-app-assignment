@@ -1,7 +1,5 @@
 const { check } = require('express-validator');
 
-const Category = require('../models/category');
-
 exports.createCategoryValidations = [
   check('title')
     .isString()
@@ -12,7 +10,10 @@ exports.createCategoryValidations = [
     .trim()
     .toLowerCase()
     .isLength({ min: 3, max: 10 })
-    .withMessage('Category title must be between 3 to 10 characters'),
+    .withMessage('Category title must be between 3 to 10 characters')
+    .not()
+    .contains(' ')
+    .withMessage('Category must be 1 word'),
 ];
 
 exports.updateCategoryValidations = [
@@ -25,5 +26,8 @@ exports.updateCategoryValidations = [
     .toLowerCase()
     .withMessage('Category title is required')
     .isLength({ min: 3, max: 10 })
-    .withMessage('Category title must be between 3 to 10 characters'),
+    .withMessage('Category title must be between 3 to 10 characters')
+    .not()
+    .contains(' ')
+    .withMessage('Category must be 1 word'),
 ];

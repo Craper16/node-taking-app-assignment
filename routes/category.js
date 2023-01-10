@@ -28,6 +28,6 @@ router.put(
   categoryController.updateCategory
 ); //update
 
-router.delete('/:categoryId', isAuth, categoryController.deleteCategory); //delete
+router.delete('/delete-category/:categoryId', isAuth, categoryController.deleteCategory); //delete
 
 module.exports = router;

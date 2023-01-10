@@ -32,6 +32,6 @@ router.put(
   noteController.updateNote
 );
 
-router.delete('/:noteId', isAuth, noteController.deleteNote);
+router.delete('/delete-note/:noteId', isAuth, noteController.deleteNote);
 
 module.exports = router;

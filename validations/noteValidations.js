@@ -1,8 +1,5 @@
 const { check } = require('express-validator');
 
-const Category = require('../models/category');
-const Note = require('../models/note');
-
 exports.createNoteValidations = [
   check('title')
     .isString()
@@ -32,7 +29,7 @@ exports.createNoteValidations = [
     .withMessage('Must add at least 1 tag')
     .custom((values) => {
       if (values.length > 10) {
-        throw new Error('Cannot enter more than 10 tags');
+        return Promise.reject('Cannot enter more than 10 tags');
       }
       return true;
     }),
@@ -87,7 +84,7 @@ exports.updateNoteValidation = [
     .withMessage('Must add at least 1 tag')
     .custom((values) => {
       if (values.length > 10) {
-        throw new Error('Cannot enter more than 10 tags');
+        return Promise.reject('Cannot enter more than 10 tags');
       }
       return true;
     }),

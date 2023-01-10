@@ -83,9 +83,10 @@ exports.getNotesByCategory = async (req, res, next) => {
 
     const totalItems = await Note.find({
       category: categoryId,
+      creator: req.userId,
     }).countDocuments();
 
-    const notes = await Note.find({ category: categoryId })
+    const notes = await Note.find({ category: categoryId, creator: req.userId })
       .populate()
       .sort({ updatedAt: -1 })
       .skip((currentPage - 1) * PER_PAGE)
@@ -110,7 +111,10 @@ exports.getByTag = async (req, res, next) => {
 
     const currentPage = req.query.page || 1;
 
-    const totalNotes = await Note.find({ tags: tag }).countDocuments();
+    const totalNotes = await Note.find({
+      tags: tag,
+      creator: req.userId,
+    }).countDocuments();
     const notes = await Note.find({ tags: tag })
       .populate()
       .sort({ updatedAt: -1 })
